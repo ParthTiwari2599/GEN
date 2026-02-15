@@ -151,6 +151,37 @@ ${cleaned}
 </html>`;
   }
 
+  function escapeHtml(source) {
+    return source
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function buildCodeFallbackPreview(source) {
+    const escaped = escapeHtml(cleanFenceArtifacts(source) || "No preview available for this output.");
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview Fallback</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; padding: 16px; background: #ffffff; color: #111111; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .note { margin: 0 0 12px; font: 600 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: #7a4b2e; }
+      pre { margin: 0; white-space: pre-wrap; word-break: break-word; background: #f5f5f5; border: 1px solid #e4e4e4; border-radius: 10px; padding: 12px; }
+    </style>
+  </head>
+  <body>
+    <p class="note">Direct HTML preview not returned. Showing generated code:</p>
+    <pre>${escaped}</pre>
+  </body>
+</html>`;
+  }
+
   function extractCodeBlocks(response) {
     const matches = [...response.matchAll(/(?:```|~~~)(\w+)?\s*([\s\S]*?)(?:```|~~~)/g)];
     if (!matches.length) {
@@ -244,7 +275,11 @@ Do not add explanation text.`
       const htmlBlock =
         blocks.find((b) => b.lang === "html" && isRunnableHtml(b.code)) ||
         blocks.find((b) => isRunnableHtml(b.code));
-      const previewHtml = ensureRunnableHtml(htmlBlock?.code || primaryCode);
+      const previewHtml = htmlBlock
+        ? ensureRunnableHtml(htmlBlock.code)
+        : frameWork.value.startsWith("html")
+        ? ensureRunnableHtml(primaryCode)
+        : buildCodeFallbackPreview(primaryCode);
 
       cacheRef.current.set(cacheKey, { code: cleanFenceArtifacts(primaryCode), previewDoc: previewHtml });
       setCode(cleanFenceArtifacts(primaryCode));
