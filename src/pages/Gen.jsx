@@ -54,6 +54,7 @@ const frameworkGuide = {
 
 const Gen = () => {
   const navigate = useNavigate();
+  const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
   const options = frameworkOptions;
 
   const [outputScreen, setOutputScreen] = useState(false);
@@ -155,11 +156,13 @@ ${cleaned}
     return s.includes("<html") || s.includes("<body") || s.includes("<!doctype");
   }
 
-  const ai = new GoogleGenAI({
-    apiKey: "AIzaSyD3xFymDosdKckq5gV97Md4a7DrTVvh1Ck",
-  });
+  const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
   async function generateWithFastStrategy(contents) {
+    if (!ai) {
+      throw new Error("Missing VITE_GEMINI_API_KEY");
+    }
+
     const attempts = [
       {
         model: "gemini-2.0-flash-lite",
@@ -191,6 +194,9 @@ ${cleaned}
   async function getResponse() {
     const cleanPrompt = prompt.trim();
     if (!cleanPrompt) return toast.error("Please describe your component first");
+    if (!geminiApiKey) {
+      return toast.error("Missing Gemini API key. Add VITE_GEMINI_API_KEY in .env");
+    }
 
     const cacheKey = `${frameWork.value}::${cleanPrompt}`;
     const cached = cacheRef.current.get(cacheKey);

@@ -12,6 +12,7 @@ import { ClipLoader } from 'react-spinners';
 import { toast } from 'react-toastify';
 
 const Home = () => {
+  const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   // ✅ Framework options
   const options = [
@@ -39,13 +40,12 @@ const Home = () => {
   }
 
   // ⚠️ API Key
-  const ai = new GoogleGenAI({
-    apiKey: "AIzaSyD3xFymDosdKckq5gV97Md4a7DrTVvh1Ck"
-  });
+  const ai = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
 
   // ✅ Generate code
   async function getResponse() {
     if (!prompt.trim()) return toast.error("Please describe your component first");
+    if (!geminiApiKey || !ai) return toast.error("Missing Gemini API key. Add VITE_GEMINI_API_KEY in .env");
 
     try {
       setLoading(true);
@@ -246,3 +246,5 @@ const Home = () => {
 }
 
 export default Home
+
+
