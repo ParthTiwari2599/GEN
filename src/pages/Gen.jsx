@@ -69,6 +69,18 @@ const Gen = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const cacheRef = useRef(new Map());
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function getErrorStatus(error) {
+    return error?.status || error?.response?.status || error?.cause?.status || null;
+  }
+
+  function isRateLimitError(error) {
+    const status = getErrorStatus(error);
+    const message = String(error?.message || "").toLowerCase();
+    return status === 429 || message.includes("429") || message.includes("quota") || message.includes("rate limit");
+  }
+
   useEffect(() => {
     const handleScroll = () => {
       const maxScroll =
@@ -176,7 +188,8 @@ ${cleaned}
     ];
 
     let lastError;
-    for (const attempt of attempts) {
+    for (let i = 0; i < attempts.length; i += 1) {
+      const attempt = attempts[i];
       try {
         return await ai.models.generateContent({
           model: attempt.model,
@@ -185,6 +198,9 @@ ${cleaned}
         });
       } catch (error) {
         lastError = error;
+        if (isRateLimitError(error) && i < attempts.length - 1) {
+          await sleep(1200 * (i + 1));
+        }
       }
     }
 
@@ -236,7 +252,11 @@ Do not add explanation text.`
       setOutputScreen(true);
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong while generating code");
+      if (isRateLimitError(error)) {
+        toast.error("Rate limit hit. 20-60 sec wait karke dubara try karo, ya Gemini quota/billing increase karo.");
+      } else {
+        toast.error("Something went wrong while generating code");
+      }
     } finally {
       setLoading(false);
     }
@@ -343,6 +363,7 @@ Do not add explanation text.`
               <p className="text-sm text-[#6a5443]">Generate and refine output in the right panel.</p>
               <button
                 onClick={getResponse}
+                disabled={loading}
                 className="flex items-center gap-2 rounded-full bg-[#a34b2b] px-6 py-3 font-semibold text-[#fff7ef] transition hover:bg-[#8a3f24]"
               >
                 {loading ? <ClipLoader color="#fff7ef" size={18} /> : <BsStars />}
@@ -496,6 +517,7 @@ Do not add explanation text.`
             </p>
             <button
               onClick={getResponse}
+              disabled={loading}
               className="mt-6 rounded-full bg-[#a34b2b] px-6 py-3 font-semibold text-[#fff7ef] transition hover:bg-[#8a3f24]"
             >
               Generate now
